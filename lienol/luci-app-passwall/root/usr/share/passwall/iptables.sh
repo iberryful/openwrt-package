@@ -232,6 +232,10 @@ add_firewall_rule() {
 	ipset -! create $IPSET_BLACKLIST nethash
 	ipset -! create $IPSET_WHITELIST nethash
 
+	for k in $(seq 1 $TCP_NODE_NUM); do
+		ipset -! create $IPSET_BLACKLIST$k nethash
+	done
+
 	cat $RULES_PATH/chnroute | sed -e "/^$/d" | sed -e "s/^/add $IPSET_CHN &/g" | awk '{print $0} END{print "COMMIT"}' | ipset -! -R
 	cat $RULES_PATH/blacklist_ip | sed -e "/^$/d" | sed -e "s/^/add $IPSET_BLACKLIST &/g" | awk '{print $0} END{print "COMMIT"}' | ipset -! -R
 	cat $RULES_PATH/whitelist_ip | sed -e "/^$/d" | sed -e "s/^/add $IPSET_WHITELIST &/g" | awk '{print $0} END{print "COMMIT"}' | ipset -! -R
@@ -509,6 +513,10 @@ add_firewall_rule() {
 				$ipt_m -A PSW_ACL -p tcp $(factor $TCP_REDIR_PORTS "-m multiport --dport") $(comment "Default") -j $(get_action_chain $PROXY_MODE)1
 			else
 				[ "$TCP_NO_REDIR_PORTS" != "disable" ] && $ipt_n -A PSW_ACL -p tcp -m multiport --dport $TCP_NO_REDIR_PORTS $(comment "Default") -j RETURN
+				#  加载分流规则
+				for k in $(seq 1 $TCP_NODE_NUM); do
+					$ipt_n -A PSW_ACL -p tcp -m set --match-set $IPSET_BLACKLIST$k dst -g PSW_GLO$k
+				done
 				$ipt_n -A PSW_ACL -p tcp $(factor $TCP_REDIR_PORTS "-m multiport --dport") $(comment "Default") -j $(get_action_chain $PROXY_MODE)1
 			fi
 		}
@@ -589,6 +597,9 @@ del_firewall_rule() {
 	#ipset -F $IPSET_CHN >/dev/null 2>&1 && ipset -X $IPSET_CHN >/dev/null 2>&1 &
 	ipset -F $IPSET_BLACKLIST >/dev/null 2>&1 && ipset -X $IPSET_BLACKLIST >/dev/null 2>&1 &
 	ipset -F $IPSET_WHITELIST >/dev/null 2>&1 && ipset -X $IPSET_WHITELIST >/dev/null 2>&1 &
+	for k in $(seq 1 $TCP_NODE_NUM); do
+		ipset -F $IPSET_BLACKLIST$k >/dev/null 2>&1 && ipset -X $IPSET_BLACKLIST$k >/dev/null 2>&1 &
+	done
 	#echolog "删除相关防火墙规则完成。"
 }
 
@@ -599,6 +610,9 @@ flush_ipset() {
 	ipset -F $IPSET_CHN >/dev/null 2>&1 && ipset -X $IPSET_CHN >/dev/null 2>&1 &
 	ipset -F $IPSET_BLACKLIST >/dev/null 2>&1 && ipset -X $IPSET_BLACKLIST >/dev/null 2>&1 &
 	ipset -F $IPSET_WHITELIST >/dev/null 2>&1 && ipset -X $IPSET_WHITELIST >/dev/null 2>&1 &
+	for k in $(seq 1 $TCP_NODE_NUM); do
+		ipset -F $IPSET_BLACKLIST$k >/dev/null 2>&1 && ipset -X $IPSET_BLACKLIST$k >/dev/null 2>&1 &
+	done
 }
 
 flush_include() {

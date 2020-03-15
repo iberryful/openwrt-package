@@ -650,7 +650,7 @@ add_dnsmasq() {
 			[ -f "$RULES_PATH/whitelist_host" -a -s "$RULES_PATH/whitelist_host" ] && cat $RULES_PATH/whitelist_host | sed -e "/^$/d" | sort | awk '{print "server=/."$1"/'$UP_CHINA_DNS1'\nipset=/."$1"/whitelist"}' > $TMP_DNSMASQ_PATH/whitelist_host.conf
 			uci show $CONFIG | grep "@nodes" | grep "address" | cut -d "'" -f 2 | sed 's/^\(https:\/\/\|http:\/\/\)//g' | awk -F '/' '{print $1}' | grep -E '.*\..*$' | grep '[a-zA-Z]$' | sort | uniq | awk '{print "server=/."$1"/'$UP_CHINA_DNS1'\nipset=/."$1"/vpsiplist"}' > $TMP_DNSMASQ_PATH/vpsiplist_host.conf
 		fi
-		[ -f "$RULES_PATH/blacklist_host" -a -s "$RULES_PATH/blacklist_host" ] && cat $RULES_PATH/blacklist_host | sed -e "/^$/d" | sort | awk '{print "server=/."$1"/127.0.0.1#'$DNS_PORT'\nipset=/."$1"/blacklist"}' > $TMP_DNSMASQ_PATH/blacklist_host.conf
+		[ -f "$RULES_PATH/blacklist_host" -a -s "$RULES_PATH/blacklist_host" ] && cat $RULES_PATH/blacklist_host | sed -e "/^$/d" | sort | awk '{print "server=/."$1"/127.0.0.1#'$DNS_PORT'\nipset=/."$1"/blacklist,blacklist"$2}' > $TMP_DNSMASQ_PATH/blacklist_host.conf
 		[ -f "$RULES_PATH/gfwlist.conf" -a -s "$RULES_PATH/gfwlist.conf" ] && ln -s $RULES_PATH/gfwlist.conf $TMP_DNSMASQ_PATH/gfwlist.conf
 		
 		subscribe_proxy=$(config_t_get global_subscribe subscribe_proxy 0)
@@ -707,6 +707,7 @@ add_dnsmasq() {
 		}
 	fi
 	
+	echo "conf-file=$TMP_DNSMASQ_PATH/blacklist_host.conf" >> /var/dnsmasq.d/dnsmasq-$CONFIG.conf
 	echo "conf-dir=$TMP_DNSMASQ_PATH" >> /var/dnsmasq.d/dnsmasq-$CONFIG.conf
 	cp -rf /var/dnsmasq.d/dnsmasq-$CONFIG.conf $DNSMASQ_PATH/dnsmasq-$CONFIG.conf
 	echolog "dnsmasq：生成配置文件。"
